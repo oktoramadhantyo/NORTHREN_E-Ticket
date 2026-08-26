@@ -148,7 +148,7 @@ def format_pesan_reminder(kategori, sto, no_tiket, no_gangguan, cust_type, tangg
     judul = "⏰ Reminder Ticket Manja Northren" if kategori == "MANJA" \
         else f"⏰ Reminder Ticket {cust_type} Northren"
     isi = blok_isi(kategori, sto, no_tiket, no_gangguan, cust_type, tanggal, durasi, pic_list, booking_date)
-    catatan = (f"\nnotes: Durasi ticket sudah lebih dari {batas_jam} jam. "
+    catatan = (f"\n\nnotes: Durasi ticket sudah lebih dari {batas_jam} jam. "
                f"mohon segera dikerjakan dan diprioritaskan sampai tuntas")
     return f"{esc(judul)}\n\n{isi}{catatan}"
 
