@@ -58,7 +58,12 @@ SUMBER_TIKET = {
 KATEGORI_MONITORING = ["HVC", "HVC_GOLD", "REGULER", "MANJA"]
 
 # ==================== SETUP KONEKSI SPREADSHEET ====================
-creds = Credentials.from_service_account_file(CREDENTIAL_FILE, scopes=SCOPES)
+cred_json = os.getenv("GOOGLE_CREDENTIALS")
+if cred_json:
+    info = json.loads(cred_json)
+    creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+else:
+    creds = Credentials.from_service_account_file(CREDENTIAL_FILE, scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID)
 
