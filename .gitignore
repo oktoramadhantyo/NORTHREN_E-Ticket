@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.pyo
+sent_tickets.json
+modern-triumph-506502-u0-2b11a7b4943a.json
