@@ -62,8 +62,10 @@ cred_json = os.getenv("GOOGLE_CREDENTIALS")
 if cred_json:
     info = json.loads(cred_json)
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+    print("Kredensial dimuat dari environment variable GOOGLE_CREDENTIALS")
 else:
     creds = Credentials.from_service_account_file(CREDENTIAL_FILE, scopes=SCOPES)
+    print(f"Kredensial dimuat dari file: {CREDENTIAL_FILE}")
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID)
 
@@ -316,10 +318,17 @@ def keyboard_wilayah():
     ]})
 
 
+HVC_JENIS = {
+    "HVC_DIAMOND": "HVC Diamond",
+    "HVC_PLATINUM": "HVC Platinum",
+}
+
+
 def keyboard_jenis(wilayah):
     return json.dumps({"inline_keyboard": [
-        [{"text": "HVC", "callback_data": f"tiket:HVC:{wilayah}"},
-         {"text": "HVC_GOLD", "callback_data": f"tiket:HVC_GOLD:{wilayah}"}],
+        [{"text": "HVC Diamond", "callback_data": f"tiket:HVC_DIAMOND:{wilayah}"},
+         {"text": "HVC Platinum", "callback_data": f"tiket:HVC_PLATINUM:{wilayah}"}],
+        [{"text": "HVC_GOLD", "callback_data": f"tiket:HVC_GOLD:{wilayah}"}],
         [{"text": "REGULER", "callback_data": "tiket:REGULER:" + wilayah},
          {"text": "MANJA", "callback_data": "tiket:MANJA:" + wilayah}],
         [{"text": "FFG", "callback_data": "tiket:FFG:" + wilayah}],
@@ -337,7 +346,14 @@ def kirim_menu(chat_id):
 
 def daftar_tiket(kategori, wilayah=""):
     """Teks daftar tiket open sesuai jenis (+wilayah), dari siklus terakhir."""
-    tiket = SIMPANAN_TIKET.get(kategori)
+    # HVC subtypes diambil dari data HVC yang sama
+    if kategori in HVC_JENIS:
+        tiket = SIMPANAN_TIKET.get("HVC", [])
+        cust_target = kategori
+        tiket = [t for t in tiket if t.get("cust_type", "").upper().replace(" ", "_") == cust_target]
+    else:
+        tiket = SIMPANAN_TIKET.get(kategori)
+
     if tiket is None:
         return f"Jenis tiket '{kategori}' tidak dikenal."
 
@@ -346,12 +362,16 @@ def daftar_tiket(kategori, wilayah=""):
         tiket = [t for t in tiket if t["sto"].upper() in daftar_sto]
 
     nama = NAMA_WILAYAH.get(wilayah, wilayah or "-")
+    nama_tampil = HVC_JENIS.get(kategori, kategori)
     if not tiket:
-        return f"✅ Tidak ada tiket {kategori} wilayah {nama} saat ini."
+        return f"✅ Tidak ada tiket {nama_tampil} wilayah {nama} saat ini."
 
-    baris = [f"📋 Tiket {kategori} wilayah {nama} masih open ({len(tiket)} tiket):"]
+    baris = [f"📋 Tiket {nama_tampil} wilayah {nama} masih open ({len(tiket)} tiket):"]
     for i, t in enumerate(tiket, 1):
-        baris.append(f"{i}. {t['no_tiket']} | STO {t['sto'] or '-'} | TTR {t['durasi'] or '-'}")
+        if kategori == "MANJA":
+            baris.append(f"{i}. {t['no_tiket']} | STO {t['sto'] or '-'} | BOOKING DATE {t['tanggal'] or '-'}")
+        else:
+            baris.append(f"{i}. {t['no_tiket']} | STO {t['sto'] or '-'} | TTR {t['durasi'] or '-'}")
     return "\n".join(baris)
 
 
