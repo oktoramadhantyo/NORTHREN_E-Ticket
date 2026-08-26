@@ -375,6 +375,46 @@ def keyboard_jenis(wilayah):
     ]})
 
 
+# ==================== MENU /filterTicket ====================
+def keyboard_filter():
+    return json.dumps({"inline_keyboard": [
+        [{"text": "HVC Diamond", "callback_data": "filter:HVC_DIAMOND"},
+         {"text": "HVC Platinum", "callback_data": "filter:HVC_PLATINUM"}],
+        [{"text": "HVC_GOLD", "callback_data": "filter:HVC_GOLD"}],
+        [{"text": "REGULER", "callback_data": "filter:REGULER"},
+         {"text": "MANJA", "callback_data": "filter:MANJA"}],
+        [{"text": "FFG", "callback_data": "filter:FFG"}],
+    ]})
+
+
+def kirim_filter_tiket(chat_id, kategori):
+    """Kirim semua tiket open per jenis sebagai pesan terpisah (bisa dicopy)."""
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+
+    if kategori in HVC_JENIS:
+        tiket = SIMPANAN_TIKET.get("HVC", [])
+        tiket = [t for t in tiket if t.get("cust_type", "").upper().replace(" ", "_") == kategori]
+    else:
+        tiket = SIMPANAN_TIKET.get(kategori, [])
+
+    nama_tampil = HVC_JENIS.get(kategori, kategori)
+
+    if not tiket:
+        requests.post(url, data={"chat_id": chat_id,
+                                 "text": f"✅ Tidak ada tiket {nama_tampil} yang open saat ini."})
+        return
+
+    for t in tiket:
+        booking = "" if kategori == "MANJA" else t.get("booking_date", "")
+        isi = blok_isi(kategori=kategori, sto=t["sto"], no_tiket=t["no_tiket"],
+                       no_gangguan=t["no_gangguan"], cust_type=t["cust_type"],
+                       tanggal=t["tanggal"], durasi=t["durasi"], pic_list=t["pic"],
+                       booking_date=booking)
+        pesan = f"Filtering Ticket {esc(nama_tampil)}\n\n{isi}"
+        requests.post(url, data={"chat_id": chat_id, "text": pesan, "parse_mode": "HTML"})
+        time.sleep(1)
+
+
 def kirim_menu(chat_id):
     requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
         "chat_id": chat_id,
@@ -471,6 +511,10 @@ def tangani_update(update):
         elif data.startswith("tiket:"):
             _, kategori, wilayah = data.split(":", 2)
             kirim_panjang(chat_id, daftar_tiket(kategori, wilayah))
+
+        elif data.startswith("filter:"):
+            kategori = data.split(":", 1)[1]
+            kirim_filter_tiket(chat_id, kategori)
         return
 
     if "message" in update:
@@ -479,6 +523,12 @@ def tangani_update(update):
         # split('@') supaya /menu@NamaBot di grup tetap dikenali
         if teks == "/menu":
             kirim_menu(msg["chat"]["id"])
+        elif teks == "/filterticket":
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": msg["chat"]["id"],
+                "text": "🔍 Pilih jenis tiket:",
+                "reply_markup": keyboard_filter(),
+            })
 
 
 def telegram_polling():
@@ -569,7 +619,9 @@ def main():
     try:
         requests.post(f"https://api.telegram.org/bot{TOKEN}/setMyCommands",
                       json={"commands": [{"command": "menu",
-                                          "description": "Tampilkan tiket per jenis"}]},
+                                          "description": "Tampilkan tiket per jenis"},
+                                         {"command": "filterTicket",
+                                          "description": "Filter tiket per jenis (detail)"}]},
                       timeout=10)
     except Exception:
         pass
