@@ -9,7 +9,8 @@ from google.oauth2.service_account import Credentials
 
 # ==================== KONFIGURASI ====================
 TOKEN = "8828118024:AAEUqSOABc2U5QJidjdrmlbvFFqodE-Broc"
-CHAT_ID = "-5587626942"  # ganti/tambah sesuai grup asli nanti
+CHAT_IDS_FILE = "chat_ids.json"
+AWAL_CHAT_IDS = ["-5587626942"]
 
 SHEET_ID = "1dXZpM8aqtalwxSImF4H34Q9_zwtIuGB7cGzpZx0_2VA"
 CREDENTIAL_FILE = "modern-triumph-506502-u0-2b11a7b4943a.json"
@@ -98,6 +99,43 @@ def bangun_peta_booking(rows_manja):
     return peta
 
 
+# ==================== CATATAN GRUP YANG TERDAFTAR ====================
+def load_chat_ids():
+    if os.path.exists(CHAT_IDS_FILE):
+        with open(CHAT_IDS_FILE, "r") as f:
+            return json.load(f)
+    with open(CHAT_IDS_FILE, "w") as f:
+        json.dump(AWAL_CHAT_IDS, f)
+    return list(AWAL_CHAT_IDS)
+
+
+def save_chat_ids(ids):
+    with open(CHAT_IDS_FILE, "w") as f:
+        json.dump(ids, f)
+
+
+def tambah_chat_id(chat_id):
+    chat_id = str(chat_id)
+    ids = load_chat_ids()
+    if chat_id not in ids:
+        ids.append(chat_id)
+        save_chat_ids(ids)
+        print(f"[GRUP] Grup baru terdaftar: {chat_id}")
+        return True
+    return False
+
+
+def hapus_chat_id(chat_id):
+    chat_id = str(chat_id)
+    ids = load_chat_ids()
+    if chat_id in ids:
+        ids.remove(chat_id)
+        save_chat_ids(ids)
+        print(f"[GRUP] Grup dihapus: {chat_id}")
+        return True
+    return False
+
+
 # ==================== CATATAN TIKET YANG SUDAH DIKIRIM ====================
 def load_sent_tickets():
     if os.path.exists(CATATAN_FILE):
@@ -156,18 +194,19 @@ def format_pesan_reminder(kategori, sto, no_tiket, no_gangguan, cust_type, tangg
 # ==================== KIRIM KE TELEGRAM ====================
 def kirim_telegram(pesan):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": pesan, "parse_mode": "HTML"}
-    hasil = requests.post(url, data=payload).json()
-
-    # kalau kena batas laju grup (429), tunggu sesuai permintaan lalu ulang sekali
-    retry_after = hasil.get("parameters", {}).get("retry_after")
-    if not hasil.get("ok") and retry_after:
-        print(f"   Batas laju Telegram, tunggu {retry_after} detik...")
-        time.sleep(retry_after)
+    chat_ids = load_chat_ids()
+    hasil_semua = []
+    for chat_id in chat_ids:
+        payload = {"chat_id": chat_id, "text": pesan, "parse_mode": "HTML"}
         hasil = requests.post(url, data=payload).json()
-    else:
-        time.sleep(1)  # jeda antar pesan, grup dibatasi ±20 pesan/menit
-    return hasil
+        retry_after = hasil.get("parameters", {}).get("retry_after")
+        if not hasil.get("ok") and retry_after:
+            print(f"   Batas laju Telegram, tunggu {retry_after} detik...")
+            time.sleep(retry_after)
+            hasil = requests.post(url, data=payload).json()
+        hasil_semua.append(hasil)
+        time.sleep(1)
+    return hasil_semua[0] if hasil_semua else {"ok": False}
 
 
 # ==================== PROSES PER KATEGORI ====================
@@ -392,6 +431,21 @@ def kirim_panjang(chat_id, teks):
 
 def tangani_update(update):
     """Pesan masuk dari user: perintah /menu atau tombol menu ditekan."""
+    # deteksi bot di-add/di-kick dari grup
+    if "my_chat_member" in update:
+        cm = update["my_chat_member"]
+        chat = cm.get("chat", {})
+        chat_id = str(chat.get("id", ""))
+        status = cm.get("new_chat_member", {}).get("status", "")
+        if status in ("member", "administrator"):
+            if tambah_chat_id(chat_id):
+                nama = chat.get("title", chat_id)
+                print(f"[GRUP] Bot ditambahkan ke grup: {nama} ({chat_id})")
+        elif status in ("left", "kicked"):
+            if hapus_chat_id(chat_id):
+                print(f"[GRUP] Bot dihapus dari grup: {chat_id}")
+        return
+
     if "callback_query" in update:
         cb = update["callback_query"]
         # matikan indikator loading pada tombol
@@ -434,7 +488,8 @@ def telegram_polling():
         try:
             r = requests.get(
                 f"https://api.telegram.org/bot{TOKEN}/getUpdates",
-                params={"offset": offset + 1, "timeout": 30},
+                params={"offset": offset + 1, "timeout": 30,
+                        "allowed_updates": json.dumps(["message", "callback_query", "my_chat_member"])},
                 timeout=35,
             ).json()
             for u in r.get("result", []):
