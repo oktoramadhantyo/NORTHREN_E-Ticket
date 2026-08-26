@@ -369,7 +369,7 @@ def daftar_tiket(kategori, wilayah=""):
     baris = [f"📋 Tiket {nama_tampil} wilayah {nama} masih open ({len(tiket)} tiket):"]
     for i, t in enumerate(tiket, 1):
         if kategori == "MANJA":
-            baris.append(f"{i}. {t['no_tiket']} | STO {t['sto'] or '-'} | BOOKING DATE {t['tanggal'] or '-'}")
+            baris.append(f"{i}. {t['no_tiket']} | STO {t['sto'] or '-'} | {t['tanggal'] or '-'}")
         else:
             baris.append(f"{i}. {t['no_tiket']} | STO {t['sto'] or '-'} | TTR {t['durasi'] or '-'}")
     return "\n".join(baris)
