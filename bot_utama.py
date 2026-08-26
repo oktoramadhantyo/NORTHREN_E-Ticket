@@ -101,12 +101,19 @@ def bangun_peta_booking(rows_manja):
 
 # ==================== CATATAN GRUP YANG TERDAFTAR ====================
 def load_chat_ids():
+    env_ids = os.getenv("CHAT_IDS", "")
+    env_list = [cid.strip() for cid in env_ids.split(",") if cid.strip()] if env_ids else []
+
+    file_ids = []
     if os.path.exists(CHAT_IDS_FILE):
         with open(CHAT_IDS_FILE, "r") as f:
-            return json.load(f)
-    with open(CHAT_IDS_FILE, "w") as f:
-        json.dump(AWAL_CHAT_IDS, f)
-    return list(AWAL_CHAT_IDS)
+            file_ids = json.load(f)
+
+    merged = list(dict.fromkeys(env_list + file_ids + AWAL_CHAT_IDS))
+    if merged != file_ids:
+        with open(CHAT_IDS_FILE, "w") as f:
+            json.dump(merged, f)
+    return merged
 
 
 def save_chat_ids(ids):
