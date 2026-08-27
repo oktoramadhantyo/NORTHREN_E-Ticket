@@ -10,6 +10,9 @@ from google.oauth2.service_account import Credentials
 # ==================== KONFIGURASI ====================
 TOKEN = "8828118024:AAEUqSOABc2U5QJidjdrmlbvFFqodE-Broc"
 CHAT_IDS_FILE = "chat_ids.json"
+BOT_STATE_FILE = "bot_state.json"
+WILAYAH_STATE_FILE = "wilayah_state.json"
+PINNED_STATE_FILE = "pinned_state.json"
 AWAL_CHAT_IDS = ["-5587626942"]
 
 SHEET_ID = "1dXZpM8aqtalwxSImF4H34Q9_zwtIuGB7cGzpZx0_2VA"
@@ -143,6 +146,41 @@ def hapus_chat_id(chat_id):
     return False
 
 
+# ==================== STATUS ON/OFF BOT PER GRUP ====================
+def load_bot_state():
+    """Map chat_id -> bool aktif. Grup yg belum tercatat dianggap AKTIF."""
+    if os.path.exists(BOT_STATE_FILE):
+        with open(BOT_STATE_FILE, "r") as f:
+            data = json.load(f)
+        return {str(k): bool(v) for k, v in data.items()}
+    return {}
+
+
+def save_bot_state(state):
+    with open(BOT_STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+
+def is_bot_aktif(chat_id):
+    chat_id = str(chat_id)
+    return load_bot_state().get(chat_id, True)
+
+
+def set_bot_aktif(chat_id, aktif):
+    chat_id = str(chat_id)
+    state = load_bot_state()
+    state[chat_id] = bool(aktif)
+    save_bot_state(state)
+    print(f"[STATUS] Grup {chat_id} -> {'AKTIF' if aktif else 'NONAKTIF'}")
+
+
+def toggle_bot(chat_id):
+    """Balik status grup, kembalikan status baru (True=AKTIF)."""
+    baru = not is_bot_aktif(chat_id)
+    set_bot_aktif(chat_id, baru)
+    return baru
+
+
 # ==================== CATATAN TIKET YANG SUDAH DIKIRIM ====================
 def load_sent_tickets():
     if os.path.exists(CATATAN_FILE):
@@ -199,9 +237,20 @@ def format_pesan_reminder(kategori, sto, no_tiket, no_gangguan, cust_type, tangg
 
 
 # ==================== KIRIM KE TELEGRAM ====================
-def kirim_telegram(pesan):
+def kirim_telegram(pesan, sto=None):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    chat_ids = load_chat_ids()
+    # tentukan wilayah tiket dari STO (None = tak terklasifikasi -> ke semua grup)
+    ticket_wilayah = STO_KE_WILAYAH.get((sto or "").upper()) if sto else None
+    # filter: hanya grup AKTIF & region-nya cocok (atau belum memilih / tiket tak terklasifikasi)
+    chat_ids = []
+    for cid in load_chat_ids():
+        if not is_bot_aktif(cid):
+            continue
+        gw = get_wilayah(cid)
+        if gw is None or ticket_wilayah is None or gw == ticket_wilayah:
+            chat_ids.append(cid)
+    if not chat_ids:
+        return {"ok": False, "description": "tidak ada grup tujuan"}
     hasil_semua = []
     for chat_id in chat_ids:
         payload = {"chat_id": chat_id, "text": pesan, "parse_mode": "HTML"}
@@ -292,8 +341,8 @@ def proses_kategori(nama_kategori, config, rows, sent_tickets, peta_booking=None
         pesan = format_pesan(kategori=nama_kategori, sto=t["sto"], no_tiket=t["no_tiket"],
                              no_gangguan=t["no_gangguan"], cust_type=t["cust_type"],
                              tanggal=t["tanggal"], durasi=t["durasi"], pic_list=t["pic"],
-                             booking_date=booking)
-        hasil = kirim_telegram(pesan)
+                              booking_date=booking)
+        hasil = kirim_telegram(pesan, sto=t["sto"])
 
         if hasil.get("ok"):
             sent_tickets.add(f"{nama_kategori}:{t['no_tiket']}")
@@ -331,7 +380,7 @@ def proses_reminder(nama_kategori, config, rows, peta_booking=None):
                                       no_gangguan=t["no_gangguan"], cust_type=t["cust_type"],
                                       tanggal=t["tanggal"], durasi=t["durasi"], pic_list=t["pic"],
                                       booking_date=booking, batas_jam=batas)
-        hasil = kirim_telegram(pesan)
+        hasil = kirim_telegram(pesan, sto=t["sto"])
 
         if hasil.get("ok"):
             jumlah += 1
@@ -353,7 +402,62 @@ WILAYAH_STO = {
                "SMI", "DTG", "SDM"},
 }
 NAMA_WILAYAH = {"JAKUT": "Jakarta Utara", "JAKBAR": "Jakarta Barat",
-                "SEMUA": "Northren (semua)"}
+                 "SEMUA": "Northren (semua)"}
+
+# reverse map STO -> wilayah, buat filter region per grup
+STO_KE_WILAYAH = {}
+for _w, _stos in WILAYAH_STO.items():
+    for _s in _stos:
+        STO_KE_WILAYAH[_s] = _w
+
+
+# ==================== PILIHAN WILAYAH PER GRUP ====================
+def load_wilayah_state():
+    if os.path.exists(WILAYAH_STATE_FILE):
+        with open(WILAYAH_STATE_FILE, "r") as f:
+            return {str(k): str(v) for k, v in json.load(f).items()}
+    return {}
+
+
+def save_wilayah_state(state):
+    with open(WILAYAH_STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+
+def get_wilayah(chat_id):
+    # None = belum memilih -> dapat semua region (backward compatible)
+    return load_wilayah_state().get(str(chat_id))
+
+
+def set_wilayah(chat_id, wilayah):
+    chat_id = str(chat_id)
+    state = load_wilayah_state()
+    state[chat_id] = wilayah
+    save_wilayah_state(state)
+    print(f"[WILAYAH] Grup {chat_id} -> {wilayah}")
+
+
+# ==================== PESAN MAIN MENU YANG DI-PIN ====================
+def load_pinned_state():
+    if os.path.exists(PINNED_STATE_FILE):
+        with open(PINNED_STATE_FILE, "r") as f:
+            return {str(k): int(v) for k, v in json.load(f).items()}
+    return {}
+
+
+def save_pinned_state(state):
+    with open(PINNED_STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+
+def get_pinned(chat_id):
+    return load_pinned_state().get(str(chat_id))
+
+
+def set_pinned(chat_id, msg_id):
+    state = load_pinned_state()
+    state[str(chat_id)] = int(msg_id)
+    save_pinned_state(state)
 
 
 def keyboard_wilayah():
@@ -361,6 +465,81 @@ def keyboard_wilayah():
         [{"text": "🌆 Jakarta Utara", "callback_data": "wilayah:JAKUT"},
          {"text": "🌆 Jakarta Barat", "callback_data": "wilayah:JAKBAR"}],
         [{"text": "🌐 Semua (Northren)", "callback_data": "wilayah:SEMUA"}],
+        [{"text": "⬅️ Menu Utama", "callback_data": "main:home"}],
+    ]})
+
+
+def keyboard_aktivasi(chat_id):
+    aktif = is_bot_aktif(chat_id)
+    if aktif:
+        teks = "🟢 Bot AKTIF — alert & reminder jalan"
+        tombol = [{"text": "🔴 Matikan Bot", "callback_data": "bot:toggle"}]
+    else:
+        teks = "🔴 Bot NONAKTIF — alert & reminder di-pause"
+        tombol = [{"text": "🟢 Nyalakan Bot", "callback_data": "bot:toggle"}]
+    return teks, json.dumps({"inline_keyboard": [tombol]})
+
+
+# ==================== MAIN MENU (HUB ALL SUBMENU, DI-PIN) ====================
+def keyboard_main_menu(chat_id):
+    aktif = is_bot_aktif(chat_id)
+    status = "🟢 AKTIF" if aktif else "🔴 NONAKTIF"
+    w = get_wilayah(chat_id)
+    wilayah_txt = NAMA_WILAYAH.get(w, "- (belum dipilih)") if w else "- (belum dipilih)"
+    teks = (
+        "Selamat datang di bot <b>Monitoring TTR Northren</b>\n\n"
+        f"Status Bot : {status}\n"
+        f"Wilayah    : {wilayah_txt}\n\n"
+        "Berikut adalah menu yang tersedia:\n\n"
+        "📋 <b>Lihat Tiket</b> — Lihat daftar tiket open per wilayah & jenis\n"
+        "🔍 <b>Filter Tiket</b> — Filter & lihat detail tiket per jenis\n"
+        "🌍 <b>Pilih Wilayah</b> — Set wilayah grup (filter alert & reminder)\n"
+        "⚙️ <b>ON/OFF</b> — Nyalakan atau matikan bot di grup ini\n\n"
+        "Pilih menu:"
+    )
+    markup = json.dumps({"inline_keyboard": [
+        [{"text": "📋 Lihat Tiket", "callback_data": "main:menu"},
+         {"text": "🔍 Filter Tiket", "callback_data": "main:filter"}],
+        [{"text": "🌍 Pilih Wilayah", "callback_data": "main:pilwil"},
+         {"text": "⚙️ ON/OFF", "callback_data": "main:toggle"}],
+    ]})
+    return teks, markup
+
+
+def kirim_main_menu(chat_id, pin=False):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    teks, markup = keyboard_main_menu(chat_id)
+    r = requests.post(url, data={"chat_id": chat_id, "text": teks,
+                                  "reply_markup": markup, "parse_mode": "HTML"}).json()
+    if pin and r.get("ok"):
+        mid = r.get("result", {}).get("message_id")
+        if mid:
+            set_pinned(chat_id, mid)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/pinChatMessage",
+                          data={"chat_id": chat_id, "message_id": mid,
+                                "disable_notification": True})
+    return r
+
+
+def edit_atau_kirim_main_menu(chat_id):
+    """Update pesan main menu yang di-pin kalau ada, kalau gagal kirim baru."""
+    teks, markup = keyboard_main_menu(chat_id)
+    msg_id = get_pinned(chat_id)
+    if msg_id:
+        r = requests.post(f"https://api.telegram.org/bot{TOKEN}/editMessageText",
+                          data={"chat_id": chat_id, "message_id": msg_id,
+                                "text": teks, "reply_markup": markup,
+                                "parse_mode": "HTML"}).json()
+        if r.get("ok"):
+            return r
+    return kirim_main_menu(chat_id, pin=False)
+
+
+def keyboard_pilih_wilayah():
+    return json.dumps({"inline_keyboard": [
+        [{"text": "🌆 Jakarta Utara", "callback_data": "pilwil:JAKUT"},
+         {"text": "🌆 Jakarta Barat", "callback_data": "pilwil:JAKBAR"}],
+        [{"text": "⬅️ Menu Utama", "callback_data": "main:home"}],
     ]})
 
 
@@ -379,6 +558,7 @@ def keyboard_jenis(wilayah):
          {"text": "MANJA", "callback_data": "tiket:MANJA:" + wilayah}],
         [{"text": "FFG", "callback_data": "tiket:FFG:" + wilayah}],
         [{"text": "⬅️ Ganti wilayah", "callback_data": "menu:awal"}],
+        [{"text": "⬅️ Menu Utama", "callback_data": "main:home"}],
     ]})
 
 
@@ -391,6 +571,7 @@ def keyboard_filter():
         [{"text": "REGULER", "callback_data": "filter:REGULER"},
          {"text": "MANJA", "callback_data": "filter:MANJA"}],
         [{"text": "FFG", "callback_data": "filter:FFG"}],
+        [{"text": "⬅️ Menu Utama", "callback_data": "main:home"}],
     ]})
 
 
@@ -488,6 +669,7 @@ def tangani_update(update):
             if tambah_chat_id(chat_id):
                 nama = chat.get("title", chat_id)
                 print(f"[GRUP] Bot ditambahkan ke grup: {nama} ({chat_id})")
+                kirim_main_menu(chat_id, pin=True)
         elif status in ("left", "kicked"):
             if hapus_chat_id(chat_id):
                 print(f"[GRUP] Bot dihapus dari grup: {chat_id}")
@@ -505,6 +687,62 @@ def tangani_update(update):
 
         if data == "menu:awal":
             kirim_menu(chat_id)
+
+        elif data == "main:home":
+            edit_atau_kirim_main_menu(chat_id)
+
+        elif data == "main:menu":
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": chat_id,
+                "text": "📍 Pilih wilayah:",
+                "reply_markup": keyboard_wilayah(),
+            })
+
+        elif data == "main:filter":
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": chat_id,
+                "text": "🔍 Pilih jenis tiket:",
+                "reply_markup": keyboard_filter(),
+            })
+
+        elif data == "main:pilwil":
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": chat_id,
+                "text": "🌍 Pilih wilayah bot (filter alert & reminder):",
+                "reply_markup": keyboard_pilih_wilayah(),
+            })
+
+        elif data == "main:toggle":
+            toggle_bot(chat_id)
+            edit_atau_kirim_main_menu(chat_id)
+            if not is_bot_aktif(chat_id):
+                requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                    "chat_id": chat_id,
+                    "text": (
+                        "Terima kasih telah menggunakan bot ini.\n"
+                        "Jika ingin mengaktifkan bot silahkan ketik /aktivasiBot\n\n"
+                        "Bot created by: Okto Ramadhantyo (ig: _oktrmdnn)\n"
+                        "Silahkan hubungi kontak diatas jika berkepentingan"
+                    ),
+                })
+
+        elif data.startswith("pilwil:"):
+            w = data.split(":", 1)[1]
+            set_wilayah(chat_id, w)
+            nama = NAMA_WILAYAH.get(w, w)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": chat_id,
+                "text": f"✅ Wilayah grup diset ke {nama}. Alert & reminder hanya tiket wilayah tersebut.",
+            })
+
+        elif data == "bot:toggle":
+            aktif = toggle_bot(chat_id)
+            teks, markup = keyboard_aktivasi(chat_id)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": chat_id,
+                "text": teks,
+                "reply_markup": markup,
+            })
 
         elif data.startswith("wilayah:"):
             wilayah = data.split(":", 1)[1]
@@ -528,13 +766,57 @@ def tangani_update(update):
         msg = update["message"]
         teks = (msg.get("text") or "").split("@")[0].strip().lower()
         # split('@') supaya /menu@NamaBot di grup tetap dikenali
-        if teks == "/menu":
+        if teks in ("/start", "/mainmenu"):
+            kirim_main_menu(msg["chat"]["id"], pin=True)
+        elif teks == "/menu":
             kirim_menu(msg["chat"]["id"])
+        elif teks == "/aktivasibot":
+            cid = msg["chat"]["id"]
+            teks_status, markup = keyboard_aktivasi(cid)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": cid,
+                "text": teks_status,
+                "reply_markup": markup,
+            })
+        elif teks == "/pilihticketwilayah":
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": msg["chat"]["id"],
+                "text": "🌍 Pilih wilayah bot (filter alert & reminder):",
+                "reply_markup": keyboard_pilih_wilayah(),
+            })
         elif teks == "/filterticket":
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
                 "chat_id": msg["chat"]["id"],
                 "text": "🔍 Pilih jenis tiket:",
                 "reply_markup": keyboard_filter(),
+            })
+        elif teks == "/id":
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": msg["chat"]["id"],
+                "text": f"🆔 ID chat grup ini:\n<code>{msg['chat']['id']}</code>",
+                "parse_mode": "HTML",
+            })
+        elif teks == "/tes":
+            teks_menu = (
+                "📋 <b>DAFTAR MENU BOT</b>\n\n"
+                "/start atau /mainmenu\n"
+                "→ Tampilkan menu utama bot\n\n"
+                "/menu\n"
+                "→ Lihat daftar tiket open per wilayah & jenis\n\n"
+                "/filterTicket\n"
+                "→ Filter & lihat detail tiket per jenis (bisa dicopy)\n\n"
+                "/pilihTicketWilayah\n"
+                "→ Pilih wilayah bot untuk filter alert & reminder\n\n"
+                "/aktivasiBot\n"
+                "→ Nyalakan/matikan bot di grup ini\n\n"
+                "/id\n"
+                "→ Tampilkan ID chat grup ini\n\n"
+                "💡 Ketik perintah di atas atau gunakan tombol di menu utama."
+            )
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": msg["chat"]["id"],
+                "text": teks_menu,
+                "parse_mode": "HTML",
             })
 
 
@@ -622,16 +904,28 @@ def main():
     print(f"Bot berjalan. Tiket baru tiap {INTERVAL_MENIT} menit, "
           f"reminder tiap {REMINDER_JAM} jam. (Ctrl+C untuk stop)")
 
-    # daftarkan perintah /menu ke telegram (biar muncul di tombol menu bot)
+    # daftarkan perintah ke telegram (biar muncul di tombol menu bot)
     try:
         requests.post(f"https://api.telegram.org/bot{TOKEN}/setMyCommands",
-                      json={"commands": [{"command": "menu",
-                                          "description": "Tampilkan tiket per jenis"},
-                                         {"command": "filterTicket",
-                                          "description": "Filter tiket per jenis (detail)"}]},
+                      json={"commands": [
+                          {"command": "start", "description": "Tampilkan menu utama bot"},
+                          {"command": "mainmenu", "description": "Tampilkan menu utama bot"},
+                          {"command": "menu", "description": "Tampilkan tiket per jenis"},
+                          {"command": "aktivasiBot", "description": "Nyalakan/matikan bot di grup ini"},
+                          {"command": "pilihTicketWilayah", "description": "Pilih wilayah bot (filter alert & reminder)"},
+                          {"command": "filterTicket", "description": "Filter tiket per jenis (detail)"},
+                          {"command": "id", "description": "Tampilkan ID chat grup ini"},
+                          {"command": "tes", "description": "Lihat daftar semua menu & cara pakai"}]},
                       timeout=10)
     except Exception:
         pass
+
+    # pin menu utama di grup yang sudah terdaftar (biar on/off gak ke-buried)
+    for cid in load_chat_ids():
+        try:
+            kirim_main_menu(cid, pin=True)
+        except Exception as e:
+            print(f"[MAINMENU] Gagal pin ke {cid}: {e}")
 
     # jalankan thread pendengar perintah /menu dari user
     threading.Thread(target=telegram_polling, daemon=True).start()
