@@ -12,6 +12,7 @@ TOKEN = "8828118024:AAEUqSOABc2U5QJidjdrmlbvFFqodE-Broc"
 CHAT_IDS_FILE = "chat_ids.json"
 BOT_STATE_FILE = "bot_state.json"
 WILAYAH_STATE_FILE = "wilayah_state.json"
+FILTER_STATE_FILE = "filter_state.json"
 PINNED_STATE_FILE = "pinned_state.json"
 AWAL_CHAT_IDS = ["-5587626942"]
 
@@ -247,7 +248,10 @@ def kirim_telegram(pesan, sto=None):
         if not is_bot_aktif(cid):
             continue
         gw = get_wilayah(cid)
-        if gw is None or ticket_wilayah is None or gw == ticket_wilayah:
+        # filter wilayah hanya berlaku jika filter ON dan ada wilayah dipilih.
+        # OFF (northren) -> grup menerima semua wilayah.
+        if not is_filter_aktif(cid) or gw is None \
+                or ticket_wilayah is None or gw == ticket_wilayah:
             chat_ids.append(cid)
     if not chat_ids:
         return {"ok": False, "description": "tidak ada grup tujuan"}
@@ -437,6 +441,35 @@ def set_wilayah(chat_id, wilayah):
     print(f"[WILAYAH] Grup {chat_id} -> {wilayah}")
 
 
+# ==================== STATUS FILTER WILAYAH (ON/OFF) PER GRUP ====================
+# ON  = grup hanya menerima alert/reminder wilayah yang dipilih (JAKUT / JAKBAR).
+# OFF = grup menerima SEMUA wilayah (northren: Jakarta Utara + Jakarta Barat).
+# Default grup yang belum set apa-apa adalah OFF (northren).
+def load_filter_state():
+    if os.path.exists(FILTER_STATE_FILE):
+        with open(FILTER_STATE_FILE, "r") as f:
+            return {str(k): bool(v) for k, v in json.load(f).items()}
+    return {}
+
+
+def save_filter_state(state):
+    with open(FILTER_STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+
+def is_filter_aktif(chat_id):
+    """True = filter wilayah aktif (hanya wilayah pilihan). False = northren (semua)."""
+    return load_filter_state().get(str(chat_id), False)
+
+
+def set_filter(chat_id, aktif):
+    chat_id = str(chat_id)
+    state = load_filter_state()
+    state[chat_id] = bool(aktif)
+    save_filter_state(state)
+    print(f"[FILTER] Grup {chat_id} filter-> {'ON' if aktif else 'OFF'}")
+
+
 # ==================== PESAN MAIN MENU YANG DI-PIN ====================
 def load_pinned_state():
     if os.path.exists(PINNED_STATE_FILE):
@@ -486,10 +519,15 @@ def keyboard_main_menu(chat_id):
     status = "🟢 AKTIF" if aktif else "🔴 NONAKTIF"
     w = get_wilayah(chat_id)
     wilayah_txt = NAMA_WILAYAH.get(w, "- (belum dipilih)") if w else "- (belum dipilih)"
+    if is_filter_aktif(chat_id):
+        filter_txt = f"ON ({wilayah_txt})"
+    else:
+        filter_txt = "OFF (Northren)"
     teks = (
         "Selamat datang di bot <b>Monitoring TTR Northren</b>\n\n"
         f"Status Bot : {status}\n"
-        f"Wilayah    : {wilayah_txt}\n\n"
+        f"Wilayah    : {wilayah_txt}\n"
+        f"Filter     : {filter_txt}\n\n"
         "Berikut adalah menu yang tersedia:\n\n"
         "📋 <b>Lihat Tiket</b> — Lihat daftar tiket open per wilayah & jenis\n"
         "🔍 <b>Filter Tiket</b> — Filter & lihat detail tiket per jenis\n"
@@ -729,10 +767,12 @@ def tangani_update(update):
         elif data.startswith("pilwil:"):
             w = data.split(":", 1)[1]
             set_wilayah(chat_id, w)
+            set_filter(chat_id, True)
+            edit_atau_kirim_main_menu(chat_id)
             nama = NAMA_WILAYAH.get(w, w)
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
                 "chat_id": chat_id,
-                "text": f"✅ Wilayah grup diset ke {nama}. Alert & reminder hanya tiket wilayah tersebut.",
+                "text": f"✅ Filter wilayah AKTIF — set ke {nama}. Alert & reminder hanya tiket wilayah tersebut.",
             })
 
         elif data == "bot:toggle":
@@ -783,6 +823,15 @@ def tangani_update(update):
                 "chat_id": msg["chat"]["id"],
                 "text": "🌍 Pilih wilayah bot (filter alert & reminder):",
                 "reply_markup": keyboard_pilih_wilayah(),
+            })
+        elif teks == "/filteroff":
+            cid = msg["chat"]["id"]
+            set_filter(cid, False)
+            edit_atau_kirim_main_menu(cid)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+                "chat_id": cid,
+                "text": "✅ Mode normal telah kembali aktif — grup menerima notif & alert "
+                        "wilayah Jakarta Utara dan Jakarta Barat (Northren).",
             })
         elif teks == "/filterticket":
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
@@ -913,6 +962,7 @@ def main():
                           {"command": "menu", "description": "Tampilkan tiket per jenis"},
                           {"command": "aktivasiBot", "description": "Nyalakan/matikan bot di grup ini"},
                           {"command": "pilihTicketWilayah", "description": "Pilih wilayah bot (filter alert & reminder)"},
+                          {"command": "filterOff", "description": "Matikan filter wilayah (mode Northren)"},
                           {"command": "filterTicket", "description": "Filter tiket per jenis (detail)"},
                           {"command": "id", "description": "Tampilkan ID chat grup ini"},
                           {"command": "tes", "description": "Lihat daftar semua menu & cara pakai"}]},
