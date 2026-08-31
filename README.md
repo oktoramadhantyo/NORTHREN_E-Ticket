@@ -42,7 +42,7 @@ pip install gspread google-auth requests
 
 | Variabel | Nilai | Keterangan |
 |---|---|---|
-| `TOKEN` | `8828118024:AAEU...` | Token Bot Telegram |
+| `TELEGRAM_BOT_TOKEN` | dari @BotFather | Token Bot Telegram (dari file `.env`) |
 | `CHAT_ID` | `-5587626942` | ID grup Telegram |
 | `SHEET_ID` | `1dXZpM8a...` | ID Google Spreadsheet |
 | `INTERVAL_MENIT` | `5` | Interval pengecekan tiket baru (menit) |
