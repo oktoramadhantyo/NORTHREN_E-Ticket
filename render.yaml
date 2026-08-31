@@ -1,0 +1,15 @@
+services:
+  - type: worker
+    name: northren-ticket-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot_utama.py
+    autoDeploy: true
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: GOOGLE_CREDENTIALS
+        sync: false
+      - key: CHAT_IDS
+        sync: false
