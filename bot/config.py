@@ -17,6 +17,7 @@ CHAT_IDS_FILE = "chat_ids.json"
 BOT_STATE_FILE = "bot_state.json"
 WILAYAH_STATE_FILE = "wilayah_state.json"
 FILTER_STATE_FILE = "filter_state.json"
+FILTER_TIKET_STATE_FILE = "filter_tiket_state.json"
 PINNED_STATE_FILE = "pinned_state.json"
 AWAL_CHAT_IDS = ["-5587626942"]
 

@@ -6,7 +6,7 @@ import time
 from .config import HVC_JENIS, NAMA_WILAYAH, WILAYAH_STO
 from .formatter import blok_isi, esc
 from .memory import SIMPANAN_TIKET
-from .storage import get_pinned, get_wilayah, is_bot_aktif, is_filter_aktif, set_pinned
+from .storage import get_pinned, get_wilayah, is_bot_aktif, is_filter_aktif, is_filter_tiket_aktif, set_pinned
 from .telegram import edit_pesan, kirim_panjang, kirim_pesan, pin_pesan
 
 
@@ -39,23 +39,29 @@ def keyboard_main_menu(chat_id):
         filter_txt = f"ON ({wilayah_txt})"
     else:
         filter_txt = "OFF (Northren)"
+    if is_filter_tiket_aktif(chat_id):
+        ftk_txt = "ON (alert & reminder pause)"
+    else:
+        ftk_txt = "OFF (alert jalan)"
     teks = (
         "Selamat datang di bot <b>Monitoring TTR Northren</b>\n\n"
-        f"Status Bot : {status}\n"
-        f"Wilayah    : {wilayah_txt}\n"
-        f"Filter     : {filter_txt}\n\n"
+        f"Status Bot      : {status}\n"
+        f"Filter Wilayah  : {filter_txt}\n"
+        f"Filter Tiket    : {ftk_txt}\n\n"
         "Berikut adalah menu yang tersedia:\n\n"
         "📋 <b>Lihat Tiket</b> — Lihat daftar tiket open per wilayah & jenis\n"
-        "🔍 <b>Filter Tiket</b> — Filter & lihat detail tiket per jenis\n"
+        "🔍 <b>Filter Tiket</b> — Filter & lihat detail tiket per jenis (bisa dicopy)\n"
         "🌍 <b>Pilih Wilayah</b> — Set wilayah grup (filter alert & reminder)\n"
-        "⚙️ <b>ON/OFF</b> — Nyalakan atau matikan bot di grup ini\n\n"
+        "⚙️ <b>ON/OFF</b> — Hidupkan/matikan masing-masing lapisan di bawah\n\n"
         "Pilih menu:"
     )
     markup = json.dumps({"inline_keyboard": [
         [{"text": "📋 Lihat Tiket", "callback_data": "main:menu"},
          {"text": "🔍 Filter Tiket", "callback_data": "main:filter"}],
-        [{"text": "🌍 Pilih Wilayah", "callback_data": "main:pilwil"},
-         {"text": "⚙️ ON/OFF", "callback_data": "main:toggle"}],
+        [{"text": "🌍 Pilih Wilayah", "callback_data": "main:pilwil"}],
+        [{"text": "🔍 FilterTiket ON/OFF", "callback_data": "main:togglefiltertiket"},
+         {"text": "🌍 Wilayah ON/OFF", "callback_data": "main:togglewilayah"}],
+        [{"text": "⚙️ Bot ON/OFF", "callback_data": "main:toggle"}],
     ]})
     return teks, markup
 
@@ -123,7 +129,7 @@ def kirim_filter_tiket(chat_id, kategori):
     else:
         tiket = SIMPANAN_TIKET.get(kategori, [])
 
-    wilayah = get_wilayah(chat_id)
+    wilayah = get_wilayah(chat_id) if is_filter_aktif(chat_id) else None
     wilayah_dipakai = wilayah if wilayah in WILAYAH_STO else None
     if wilayah_dipakai:
         daftar_sto = WILAYAH_STO[wilayah_dipakai]

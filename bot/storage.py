@@ -7,6 +7,7 @@ from .config import (
     CATATAN_FILE,
     CHAT_IDS_FILE,
     FILTER_STATE_FILE,
+    FILTER_TIKET_STATE_FILE,
     PINNED_STATE_FILE,
     WILAYAH_STATE_FILE,
 )
@@ -137,6 +138,26 @@ def set_filter(chat_id, aktif):
     state[str(chat_id)] = bool(aktif)
     save_filter_state(state)
     print(f"[FILTER] Grup {chat_id} filter-> {'ON' if aktif else 'OFF'}")
+
+
+# ==================== STATUS FILTER TIKET (PAUSE ALERT/REMINDER) ====================
+def load_filter_tiket_state():
+    return {str(k): bool(v) for k, v in _load_json(FILTER_TIKET_STATE_FILE, {}).items()}
+
+
+def save_filter_tiket_state(state):
+    _save_json(FILTER_TIKET_STATE_FILE, state)
+
+
+def is_filter_tiket_aktif(chat_id):
+    return load_filter_tiket_state().get(str(chat_id), False)
+
+
+def set_filter_tiket(chat_id, aktif):
+    state = load_filter_tiket_state()
+    state[str(chat_id)] = bool(aktif)
+    save_filter_tiket_state(state)
+    print(f"[FILTERTIKET] Grup {chat_id} filter tiket -> {'ON' if aktif else 'OFF'}")
 
 
 # ==================== PESAN MENU YANG DI-PIN ====================

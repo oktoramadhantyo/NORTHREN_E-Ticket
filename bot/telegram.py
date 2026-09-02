@@ -5,7 +5,7 @@ import time
 import requests
 
 from .config import STO_KE_WILAYAH, TOKEN
-from .storage import get_wilayah, is_bot_aktif, is_filter_aktif, load_chat_ids
+from .storage import get_wilayah, is_bot_aktif, is_filter_aktif, is_filter_tiket_aktif, load_chat_ids
 
 
 def _post(endpoint, **kwargs):
@@ -20,6 +20,8 @@ def kirim_telegram(pesan, sto=None):
     chat_ids = []
     for cid in load_chat_ids():
         if not is_bot_aktif(cid):
+            continue
+        if is_filter_tiket_aktif(cid):
             continue
         gw = get_wilayah(cid)
         if not is_filter_aktif(cid) or gw is None \

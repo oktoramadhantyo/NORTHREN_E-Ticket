@@ -19,9 +19,13 @@ from .menu import (
     kirim_menu,
 )
 from .storage import (
+    get_wilayah,
     hapus_chat_id,
     is_bot_aktif,
+    is_filter_aktif,
+    is_filter_tiket_aktif,
     set_filter,
+    set_filter_tiket,
     set_wilayah,
     tambah_chat_id,
     toggle_bot,
@@ -74,6 +78,34 @@ def tangani_update(update):
                             "Jika ingin mengaktifkan bot silahkan ketik /aktivasiBot\n\n"
                             "Bot created by: Okto Ramadhantyo (ig: _oktrmdnn)\n"
                             "Silahkan hubungi kontak diatas jika berkepentingan")
+        elif data == "main:togglefiltertiket":
+            set_filter_tiket(chat_id, not is_filter_tiket_aktif(chat_id))
+            edit_atau_kirim_main_menu(chat_id)
+            if is_filter_tiket_aktif(chat_id):
+                kirim_pesan(chat_id,
+                            "🔍 Filter Tiket ON — alert & reminder tiket open "
+                            "di-pause. Hasil hanya dari /filterTicket.\n"
+                            "Ketik /filteroff atau tombol menu untuk balik normal.")
+            else:
+                kirim_pesan(chat_id,
+                            "🔍 Filter Tiket OFF — alert & reminder tiket open "
+                            "lanjut dikirim ke grup lagi.")
+        elif data == "main:togglewilayah":
+            set_filter(chat_id, not is_filter_aktif(chat_id))
+            edit_atau_kirim_main_menu(chat_id)
+            if is_filter_aktif(chat_id):
+                if get_wilayah(chat_id):
+                    kirim_pesan(chat_id,
+                                "🌍 Filter wilayah ON — alert & reminder hanya "
+                                "tiket wilayah terpilih.")
+                else:
+                    kirim_pesan(chat_id,
+                                "🌍 Filter wilayah ON, tapi belum ada wilayah dipilih. "
+                                "Gunakan /pilihTicketWilayah untuk set wilayah.")
+            else:
+                kirim_pesan(chat_id,
+                            "🌍 Filter wilayah OFF — grup menerima Northren "
+                            "(Jakarta Utara + Jakarta Barat).")
         elif data.startswith("pilwil:"):
             w = data.split(":", 1)[1]
             set_wilayah(chat_id, w)
@@ -116,11 +148,18 @@ def tangani_update(update):
                         reply_markup=keyboard_pilih_wilayah())
         elif teks == "/filteroff":
             cid = msg["chat"]["id"]
+            set_filter_tiket(cid, False)
+            edit_atau_kirim_main_menu(cid)
+            kirim_pesan(cid,
+                        "✅ Filter Tiket OFF — alert & reminder tiket open "
+                        "lanjut dikirim ke grup lagi.")
+        elif teks == "/wilayahoff":
+            cid = msg["chat"]["id"]
             set_filter(cid, False)
             edit_atau_kirim_main_menu(cid)
             kirim_pesan(cid,
-                        "✅ Mode normal telah kembali aktif — grup menerima notif & alert "
-                        "wilayah Jakarta Utara dan Jakarta Barat (Northren).")
+                        "✅ Filter wilayah OFF — grup menerima notif & alert "
+                        "Northren (Jakarta Utara + Jakarta Barat).")
         elif teks == "/filterticket":
             kirim_pesan(msg["chat"]["id"], "🔍 Pilih jenis tiket:",
                         reply_markup=keyboard_filter())
@@ -139,6 +178,10 @@ def tangani_update(update):
                 "→ Filter & lihat detail tiket per jenis (bisa dicopy)\n\n"
                 "/pilihTicketWilayah\n"
                 "→ Pilih wilayah bot untuk filter alert & reminder\n\n"
+                "/filterOff\n"
+                "→ Matikan Filter Tiket, alert & reminder jalan lagi\n\n"
+                "/wilayahOff\n"
+                "→ Matikan filter wilayah (kembali mode Northren)\n\n"
                 "/aktivasiBot\n"
                 "→ Nyalakan/matikan bot di grup ini\n\n"
                 "/id\n"
