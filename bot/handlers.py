@@ -65,7 +65,10 @@ def tangani_update(update):
         elif data == "main:menu":
             kirim_pesan(chat_id, "📍 Pilih wilayah:", reply_markup=keyboard_wilayah())
         elif data == "main:filter":
-            kirim_pesan(chat_id, "🔍 Pilih jenis tiket:", reply_markup=keyboard_filter())
+            set_filter_tiket(chat_id, True)
+            edit_atau_kirim_main_menu(chat_id)
+            kirim_pesan(chat_id, "🔍 Filter Tiket ON — alert & reminder tiket open di-pause.\n"
+                        "Pilih jenis tiket:", reply_markup=keyboard_filter())
         elif data == "main:pilwil":
             kirim_pesan(chat_id, "🌍 Pilih wilayah bot (filter alert & reminder):",
                         reply_markup=keyboard_pilih_wilayah())
@@ -146,14 +149,14 @@ def tangani_update(update):
         elif teks == "/pilihticketwilayah":
             kirim_pesan(msg["chat"]["id"], "🌍 Pilih wilayah bot (filter alert & reminder):",
                         reply_markup=keyboard_pilih_wilayah())
-        elif teks == "/filteroff":
+        elif teks in ("/filteroff", "/offfilter"):
             cid = msg["chat"]["id"]
             set_filter_tiket(cid, False)
             edit_atau_kirim_main_menu(cid)
             kirim_pesan(cid,
                         "✅ Filter Tiket OFF — alert & reminder tiket open "
                         "lanjut dikirim ke grup lagi.")
-        elif teks == "/wilayahoff":
+        elif teks in ("/wilayahoff", "/offwilayah"):
             cid = msg["chat"]["id"]
             set_filter(cid, False)
             edit_atau_kirim_main_menu(cid)
@@ -161,8 +164,11 @@ def tangani_update(update):
                         "✅ Filter wilayah OFF — grup menerima notif & alert "
                         "Northren (Jakarta Utara + Jakarta Barat).")
         elif teks == "/filterticket":
-            kirim_pesan(msg["chat"]["id"], "🔍 Pilih jenis tiket:",
-                        reply_markup=keyboard_filter())
+            cid = msg["chat"]["id"]
+            set_filter_tiket(cid, True)
+            edit_atau_kirim_main_menu(cid)
+            kirim_pesan(cid, "🔍 Filter Tiket ON — alert & reminder tiket open di-pause.\n"
+                        "Pilih jenis tiket:", reply_markup=keyboard_filter())
         elif teks == "/id":
             kirim_pesan(msg["chat"]["id"],
                         f"🆔 ID chat grup ini:\n<code>{msg['chat']['id']}</code>",
@@ -178,9 +184,9 @@ def tangani_update(update):
                 "→ Filter & lihat detail tiket per jenis (bisa dicopy)\n\n"
                 "/pilihTicketWilayah\n"
                 "→ Pilih wilayah bot untuk filter alert & reminder\n\n"
-                "/filterOff\n"
+                "/offFilter\n"
                 "→ Matikan Filter Tiket, alert & reminder jalan lagi\n\n"
-                "/wilayahOff\n"
+                "/offWilayah\n"
                 "→ Matikan filter wilayah (kembali mode Northren)\n\n"
                 "/aktivasiBot\n"
                 "→ Nyalakan/matikan bot di grup ini\n\n"

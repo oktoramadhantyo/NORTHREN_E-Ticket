@@ -52,16 +52,14 @@ def keyboard_main_menu(chat_id):
         "📋 <b>Lihat Tiket</b> — Lihat daftar tiket open per wilayah & jenis\n"
         "🔍 <b>Filter Tiket</b> — Filter & lihat detail tiket per jenis (bisa dicopy)\n"
         "🌍 <b>Pilih Wilayah</b> — Set wilayah grup (filter alert & reminder)\n"
-        "⚙️ <b>ON/OFF</b> — Hidupkan/matikan masing-masing lapisan di bawah\n\n"
+        "⚙️ <b>ON/OFF</b> — Nyalakan atau matikan bot di grup ini\n\n"
         "Pilih menu:"
     )
     markup = json.dumps({"inline_keyboard": [
         [{"text": "📋 Lihat Tiket", "callback_data": "main:menu"},
          {"text": "🔍 Filter Tiket", "callback_data": "main:filter"}],
-        [{"text": "🌍 Pilih Wilayah", "callback_data": "main:pilwil"}],
-        [{"text": "🔍 FilterTiket ON/OFF", "callback_data": "main:togglefiltertiket"},
-         {"text": "🌍 Wilayah ON/OFF", "callback_data": "main:togglewilayah"}],
-        [{"text": "⚙️ Bot ON/OFF", "callback_data": "main:toggle"}],
+        [{"text": "🌍 Pilih Wilayah", "callback_data": "main:pilwil"},
+         {"text": "⚙️ Bot ON/OFF", "callback_data": "main:toggle"}],
     ]})
     return teks, markup
 
