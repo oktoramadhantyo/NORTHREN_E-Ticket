@@ -105,7 +105,7 @@ def tangani_update(update):
         teks = (msg.get("text") or "").split("@")[0].strip().lower()
         if teks in ("/start", "/mainmenu"):
             kirim_main_menu(msg["chat"]["id"], pin=True)
-        elif teks == "/menu":
+        elif teks in ("/menu", "/listticket"):
             kirim_menu(msg["chat"]["id"])
         elif teks == "/aktivasibot":
             cid = msg["chat"]["id"]
@@ -133,7 +133,7 @@ def tangani_update(update):
                 "📋 <b>DAFTAR MENU BOT</b>\n\n"
                 "/start atau /mainmenu\n"
                 "→ Tampilkan menu utama bot\n\n"
-                "/menu\n"
+                "/listTicket\n"
                 "→ Lihat daftar tiket open per wilayah & jenis\n\n"
                 "/filterTicket\n"
                 "→ Filter & lihat detail tiket per jenis (bisa dicopy)\n\n"

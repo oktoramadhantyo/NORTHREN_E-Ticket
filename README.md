@@ -9,7 +9,7 @@ Bot Python yang memantau tiket gangguan dari Google Spreadsheet secara otomatis 
 Bot ini membaca data tiket dari Google Sheets, lalu mengirim notifikasi ke Telegram untuk:
 1. **Tiket baru** — dikirim sekali saat pertama terdeteksi.
 2. **Reminder** — dikirim ulang secara berkala untuk tiket yang masih open dan sudah melewati batas waktu.
-3. **Menu interaktif** — pengguna bisa melihat daftar tiket per wilayah/jenis via perintah `/menu`.
+3. **Menu interaktif** — pengguna bisa melihat daftar tiket per wilayah/jenis via perintah `/listTicket`.
 
 ---
 
@@ -100,12 +100,12 @@ Tekan `Ctrl+C` untuk menghentikan bot.
 
 ```
 main()
- ├── Register /menu command ke Telegram
+ ├── Register /listTicket command ke Telegram
  ├── Jalankan thread telegram_polling() (long polling)
  └── Loop utama:
       ├── baca_data()           → baca semua sheet sekaligus (batch_get)
       ├── bangun_peta_booking() → mapping tiket MANJA ke booking date
-      ├── simpan_snapshot_tiket() → simpan untuk fitur /menu
+      ├── simpan_snapshot_tiket() → simpan untuk fitur /listTicket
       ├── proses_kategori()     → kirim alert tiket BARU (sekali kirim)
       ├── proses_reminder()     → kirim reminder tiket OVERDUE (berulang)
       └── sleep(INTERVAL_MENIT × 60)
@@ -113,9 +113,9 @@ main()
 
 ---
 
-## Fitur `/menu`
+## Fitur `/listTicket`
 
-Pengguna di Telegram dapat mengetik `/menu` untuk membuka menu interaktif:
+Pengguna di Telegram dapat mengetik `/listTicket` untuk membuka menu interaktif:
 
 1. **Pilih Wilayah** → Jakarta Utara / Jakarta Barat / Semua
 2. **Pilih Jenis Tiket** → HVC / HVC_GOLD / REGULER / MANJA / FFG

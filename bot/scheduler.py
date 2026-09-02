@@ -60,7 +60,7 @@ def daftar_perintah():
     return [
         {"command": "start", "description": "Tampilkan menu utama bot"},
         {"command": "mainmenu", "description": "Tampilkan menu utama bot"},
-        {"command": "menu", "description": "Tampilkan tiket per jenis"},
+        {"command": "listTicket", "description": "Tampilkan tiket per jenis & wilayah"},
         {"command": "aktivasiBot", "description": "Nyalakan/matikan bot di grup ini"},
         {"command": "pilihTicketWilayah", "description": "Pilih wilayah bot (filter alert & reminder)"},
         {"command": "filterOff", "description": "Matikan filter wilayah (mode Northren)"},
