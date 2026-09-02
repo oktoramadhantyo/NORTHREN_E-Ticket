@@ -1,4 +1,4 @@
-# Bot Utama — Monitoring Tiket Telegram
+# Bot Utama | Monitoring Tiket Telegram
 
 Bot Python yang memantau tiket gangguan dari Google Spreadsheet secara otomatis dan mengirimkan notifikasi/alert ke grup Telegram.
 
