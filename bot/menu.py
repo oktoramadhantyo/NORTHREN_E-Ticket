@@ -123,10 +123,19 @@ def kirim_filter_tiket(chat_id, kategori):
     else:
         tiket = SIMPANAN_TIKET.get(kategori, [])
 
+    wilayah = get_wilayah(chat_id)
+    wilayah_dipakai = wilayah if wilayah in WILAYAH_STO else None
+    if wilayah_dipakai:
+        daftar_sto = WILAYAH_STO[wilayah_dipakai]
+        tiket = [t for t in tiket if t.get("sto", "").upper() in daftar_sto]
+
     nama_tampil = HVC_JENIS.get(kategori, kategori)
+    nama_wilayah = NAMA_WILAYAH.get(wilayah_dipakai, "") if wilayah_dipakai else ""
+    label = f" — wilayah {nama_wilayah}" if nama_wilayah else ""
 
     if not tiket:
-        kirim_pesan(chat_id, f"✅ Tidak ada tiket {nama_tampil} yang open saat ini.")
+        kirim_pesan(chat_id,
+                    f"✅ Tidak ada tiket {nama_tampil}{label} yang open saat ini.")
         return
 
     for t in tiket:
@@ -135,7 +144,7 @@ def kirim_filter_tiket(chat_id, kategori):
                        no_gangguan=t["no_gangguan"], cust_type=t["cust_type"],
                        tanggal=t["tanggal"], durasi=t["durasi"], pic_list=t["pic"],
                        booking_date=booking)
-        pesan = f"Filtering Ticket {esc(nama_tampil)}\n\n{isi}"
+        pesan = f"Filtering Ticket {esc(nama_tampil)}{label}\n\n{isi}"
         kirim_pesan(chat_id, pesan, parse_mode="HTML")
         time.sleep(1)
 
