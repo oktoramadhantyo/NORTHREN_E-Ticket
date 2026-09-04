@@ -52,7 +52,8 @@ def keyboard_main_menu(chat_id):
         "/listTicket — Lihat daftar tiket open per wilayah & jenis\n"
         "/filterTicket — Filter & lihat detail tiket per jenis (bisa dicopy)\n"
         "/pilihTicketWilayah — Set wilayah grup (filter alert & reminder)\n"
-        "/aktivasiBot — Nyalakan atau matikan bot di grup ini\n\n"
+        "/aktivasiBot — Nyalakan atau matikan bot di grup ini\n"
+        "/id — Tampilkan ID chat grup ini\n\n"
         "Pilih menu:"
     )
     markup = json.dumps({"inline_keyboard": [

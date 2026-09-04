@@ -197,6 +197,10 @@ def tangani_update(update):
                 "💡 Ketik perintah di atas atau gunakan tombol di menu utama."
             )
             kirim_pesan(msg["chat"]["id"], teks_menu, parse_mode="HTML")
+        elif teks.startswith("/") and teks != "/":
+            kirim_pesan(msg["chat"]["id"],
+                        "❌ Maaf, menu yang Anda masukkan salah.\n"
+                        "Silahkan cek /start untuk melihat menu yang tersedia.")
 
 
 def telegram_polling():
