@@ -138,7 +138,7 @@ def tangani_update(update):
     if "message" in update:
         msg = update["message"]
         teks = (msg.get("text") or "").split("@")[0].strip().lower()
-        if teks in ("/start", "/mainmenu"):
+        if teks == "/start":
             kirim_main_menu(msg["chat"]["id"], pin=True)
         elif teks in ("/menu", "/listticket"):
             kirim_menu(msg["chat"]["id"])
@@ -173,10 +173,10 @@ def tangani_update(update):
             kirim_pesan(msg["chat"]["id"],
                         f"🆔 ID chat grup ini:\n<code>{msg['chat']['id']}</code>",
                         parse_mode="HTML")
-        elif teks == "/tes":
+        elif teks == "/set":
             teks_menu = (
                 "📋 <b>DAFTAR MENU BOT</b>\n\n"
-                "/start atau /mainmenu\n"
+                "/start\n"
                 "→ Tampilkan menu utama bot\n\n"
                 "/listTicket\n"
                 "→ Lihat daftar tiket open per wilayah & jenis\n\n"
@@ -190,6 +190,8 @@ def tangani_update(update):
                 "→ Matikan filter wilayah (kembali mode Northren)\n\n"
                 "/aktivasiBot\n"
                 "→ Nyalakan/matikan bot di grup ini\n\n"
+                "/set\n"
+                "→ Tampilkan daftar menu ini\n\n"
                 "/id\n"
                 "→ Tampilkan ID chat grup ini\n\n"
                 "💡 Ketik perintah di atas atau gunakan tombol di menu utama."

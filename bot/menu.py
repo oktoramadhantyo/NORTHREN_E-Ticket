@@ -49,10 +49,10 @@ def keyboard_main_menu(chat_id):
         f"Filter Wilayah  : {filter_txt}\n"
         f"Filter Tiket    : {ftk_txt}\n\n"
         "Berikut adalah menu yang tersedia:\n\n"
-        "📋 <b>Lihat Tiket</b> — Lihat daftar tiket open per wilayah & jenis\n"
-        "🔍 <b>Filter Tiket</b> — Filter & lihat detail tiket per jenis (bisa dicopy)\n"
-        "🌍 <b>Pilih Wilayah</b> — Set wilayah grup (filter alert & reminder)\n"
-        "⚙️ <b>ON/OFF</b> — Nyalakan atau matikan bot di grup ini\n\n"
+        "/listTicket — Lihat daftar tiket open per wilayah & jenis\n"
+        "/filterTicket — Filter & lihat detail tiket per jenis (bisa dicopy)\n"
+        "/pilihTicketWilayah — Set wilayah grup (filter alert & reminder)\n"
+        "/aktivasiBot — Nyalakan atau matikan bot di grup ini\n\n"
         "Pilih menu:"
     )
     markup = json.dumps({"inline_keyboard": [

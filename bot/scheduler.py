@@ -59,15 +59,14 @@ def jalankan_siklus(kirim_reminder=False):
 def daftar_perintah():
     return [
         {"command": "start", "description": "Tampilkan menu utama bot"},
-        {"command": "mainmenu", "description": "Tampilkan menu utama bot"},
         {"command": "listTicket", "description": "Tampilkan tiket per jenis & wilayah"},
         {"command": "aktivasiBot", "description": "Nyalakan/matikan bot di grup ini"},
         {"command": "pilihTicketWilayah", "description": "Pilih wilayah bot (filter alert & reminder)"},
         {"command": "offFilter", "description": "Matikan Filter Tiket, lanjutkan alert & reminder"},
         {"command": "offWilayah", "description": "Matikan filter wilayah (mode Northren)"},
         {"command": "filterTicket", "description": "Filter tiket per jenis (detail)"},
+        {"command": "set", "description": "Lihat daftar semua menu & cara pakai"},
         {"command": "id", "description": "Tampilkan ID chat grup ini"},
-        {"command": "tes", "description": "Lihat daftar semua menu & cara pakai"},
     ]
 
 
