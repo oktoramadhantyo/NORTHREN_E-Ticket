@@ -139,7 +139,13 @@ def tangani_update(update):
         msg = update["message"]
         teks = (msg.get("text") or "").split("@")[0].strip().lower()
         if teks == "/start":
-            kirim_main_menu(msg["chat"]["id"], pin=True)
+            cid = msg["chat"]["id"]
+            # Chat private tidak punya event my_chat_member seperti grup, jadi
+            # user yang chat bot langsung didaftarkan lewat /start.
+            if msg["chat"].get("type") == "private" and tambah_chat_id(cid):
+                kirim_pesan(cid, "✅ Chat ini terdaftar sebagai tujuan alert.\n"
+                            "Bot akan kirim notifikasi tiket ke sini.", parse_mode="HTML")
+            kirim_main_menu(cid, pin=msg["chat"].get("type") != "private")
         elif teks in ("/menu", "/listticket"):
             kirim_menu(msg["chat"]["id"])
         elif teks == "/aktivasibot":
@@ -170,8 +176,13 @@ def tangani_update(update):
             kirim_pesan(cid, "🔍 Filter Tiket ON — alert & reminder tiket open di-pause.\n"
                         "Pilih jenis tiket:", reply_markup=keyboard_filter())
         elif teks == "/id":
-            kirim_pesan(msg["chat"]["id"],
-                        f"🆔 ID chat grup ini:\n<code>{msg['chat']['id']}</code>",
+            cid = msg["chat"]["id"]
+            baru = tambah_chat_id(cid)
+            kirim_pesan(cid,
+                        f"🆔 ID chat ini:\n<code>{cid}</code>\n\n"
+                        + ("✅ Chat ini baru didaftarkan sebagai tujuan alert."
+                           if baru else
+                           "✅ Chat ini sudah ada di daftar tujuan alert."),
                         parse_mode="HTML")
         elif teks == "/set":
             teks_menu = (
@@ -193,8 +204,11 @@ def tangani_update(update):
                 "/set\n"
                 "→ Tampilkan daftar menu ini\n\n"
                 "/id\n"
-                "→ Tampilkan ID chat grup ini\n\n"
-                "💡 Ketik perintah di atas atau gunakan tombol di menu utama."
+                "→ Tampilkan ID chat ini, sekaligus mendaftarkan\n"
+                "  chat ini sebagai tujuan alert\n\n"
+                "💡 Ketik perintah di atas atau gunakan tombol di menu utama.\n"
+                "💡 Grup/user baru cukup kirim /id satu kali, tidak perlu\n"
+                "   diedit manual di file konfigurasi."
             )
             kirim_pesan(msg["chat"]["id"], teks_menu, parse_mode="HTML")
         elif teks.startswith("/") and teks != "/":

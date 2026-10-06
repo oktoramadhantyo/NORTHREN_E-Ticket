@@ -66,7 +66,7 @@ def daftar_perintah():
         {"command": "offWilayah", "description": "Matikan filter wilayah (mode Northren)"},
         {"command": "filterTicket", "description": "Filter tiket per jenis (detail)"},
         {"command": "set", "description": "Lihat daftar semua menu & cara pakai"},
-        {"command": "id", "description": "Tampilkan ID chat grup ini"},
+        {"command": "id", "description": "Tampilkan ID chat ini & daftarkan sbg tujuan alert"},
     ]
 
 

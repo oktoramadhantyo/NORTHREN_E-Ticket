@@ -19,7 +19,11 @@ WILAYAH_STATE_FILE = "wilayah_state.json"
 FILTER_STATE_FILE = "filter_state.json"
 FILTER_TIKET_STATE_FILE = "filter_tiket_state.json"
 PINNED_STATE_FILE = "pinned_state.json"
-AWAL_CHAT_IDS = ["-5587626942"]
+
+# Daftar grup tujuan awal. Ambil dari env CHAT_IDS (pisahkan dengan koma).
+# Kalau env kosong, bot tetap boleh jalan asal chat_ids.json punya isi - file
+# itu bertambah sendiri setiap ada grup/user baru yang kirim /id.
+AWAL_CHAT_IDS = [x.strip() for x in (os.getenv("CHAT_IDS") or "").split(",") if x.strip()]
 
 SHEET_ID = os.getenv("SHEET_ID", "1dXZpM8aqtalwxSImF4H34Q9_zwtIuGB7cGzpZx0_2VA").strip()
 if not SHEET_ID:
@@ -85,3 +89,38 @@ STO_KE_WILAYAH = {}
 for _w, _stos in WILAYAH_STO.items():
     for _s in _stos:
         STO_KE_WILAYAH[_s] = _w
+
+
+def diagnosis():
+    """Cek konfigurasi sebelum bot dijalankan.
+
+    Mengembalikan daftar (masalah, saran). Kalau kosong berarti aman jalan.
+    Dipakai bot_utama.py supaya bot berhenti dengan pesan jelas, bukan crash
+    atau diam-diam online tanpa mengirim apa pun.
+
+    Daftar grup tujuan sengaja TIDAK dicek di sini. Pengecekan itu butuh
+    bot/storage.py, yang mengimpor modul ini, jadi tidak bisa bolak-balik.
+    bot_utama.py yang memeriksanya sebelum loop dimulai.
+    """
+    masalah = []
+
+    if not TOKEN:
+        masalah.append((
+            "TELEGRAM_BOT_TOKEN belum diisi di environment",
+            "Isi token dari @BotFather, formatnya seperti 123456789:AAE...",
+        ))
+
+    if not SHEET_ID:
+        masalah.append((
+            "SHEET_ID kosong",
+            "Spreadsheet ID = bagian URL di antara /d/ dan /edit, 44 karakter.",
+        ))
+
+    if not os.getenv("GOOGLE_CREDENTIALS") and not os.path.exists(CREDENTIAL_FILE):
+        masalah.append((
+            f"Kredensial Google tidak ditemukan: {CREDENTIAL_FILE}",
+            "Isi GOOGLE_CREDENTIALS (JSON kredensial service account dalam satu "
+            "baris), atau taruh file kredensial itu di folder ini.",
+        ))
+
+    return masalah
