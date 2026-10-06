@@ -11,5 +11,7 @@ services:
         sync: false
       - key: GOOGLE_CREDENTIALS
         sync: false
+      - key: SHEET_ID
+        sync: false
       - key: CHAT_IDS
         sync: false

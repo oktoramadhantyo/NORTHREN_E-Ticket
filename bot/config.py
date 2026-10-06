@@ -21,7 +21,13 @@ FILTER_TIKET_STATE_FILE = "filter_tiket_state.json"
 PINNED_STATE_FILE = "pinned_state.json"
 AWAL_CHAT_IDS = ["-5587626942"]
 
-SHEET_ID = "1dXZpM8aqtalwxSImF4H34Q9_zwtIuGB7cGzpZx0_2VA"
+SHEET_ID = os.getenv("SHEET_ID", "1dXZpM8aqtalwxSImF4H34Q9_zwtIuGB7cGzpZx0_2VA").strip()
+if not SHEET_ID:
+    raise SystemExit(
+        "SHEET_ID belum di-set. "
+        "Isi env var SHEET_ID dengan ID spreadsheet sumber tiket "
+        "(bagian URL di antara /d/ dan /edit)."
+    )
 CREDENTIAL_FILE = "modern-triumph-506502-u0-2b11a7b4943a.json"
 CATATAN_FILE = "sent_tickets.json"
 
